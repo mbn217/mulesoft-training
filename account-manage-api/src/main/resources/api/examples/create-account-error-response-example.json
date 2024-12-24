@@ -1,0 +1,6 @@
+{
+  "status": "Failure",
+  "correlationId": "fb354d10-d966-11ee-8421-0622ec670f85",
+  "errorMessage": ["Required value is missing [accountNumber]"],
+  "developerMessage": "Data validation"
+}

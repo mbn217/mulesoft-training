@@ -1,0 +1,10 @@
+{
+	"accountNumber": "109867898",
+	"accountName": "John Doe",
+	"billingStreet": "456 Oak Street",
+	"billingCity": "Townsville",
+	"billingCountry": "United States",
+	"billingState": "California",
+	"billingPostalCode": "54321",
+	"accountPhoneNumber": "1234567890"
+}
