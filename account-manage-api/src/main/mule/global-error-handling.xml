@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<error-handler name="global-error-handlingError_Handler" doc:id="63607fc6-1876-4882-9ce8-b25a4574a658" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="Data Validation Errors" doc:id="a1e7e3bb-6289-42be-90dc-dad806591e5b" type="DATA:VALIDATION" >
+			<logger level="INFO" doc:name="Data and Format Validation Errors Logger" doc:id="977bee10-6d62-41a6-9b49-b6d83405e4c8" message='Message Id : #[correlationId] || Data and Format Error Handlers' />
+			<ee:transform doc:name="Frame Data and Format Validation Error Response" doc:id="8b78355d-1cb6-4c5a-a020-dbf7e58f0b6d" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var errors = vars.errorMessage
+---
+{
+	"status": "Failure",
+    "correlationId": correlationId,
+	errorMessage: vars.errorMessage default ["Bad Request"]
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
+output application/java
+---
+400]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="Generic Error" doc:id="6856baa8-debb-439d-8436-8c62135d55a2" >
+			<logger level="INFO" doc:name="Generic Errors Logger" doc:id="3283b079-eccc-4f59-9619-a17eb36e2e0e" message="Message Id : #[correlationId] || Generic Error Handlers" />
+			<ee:transform doc:name="Frame Generic Error Response" doc:id="751bab09-010a-4f9e-8709-3a9fad733b0f" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var errors = vars.errorMessage
+---
+{
+	"status": "Failure",
+    "correlationId": correlationId,
+	errorMessage: [(error.description default "Internal Server Error")]
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
+output application/java
+---
+400]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+	</error-handler>
+</mule>

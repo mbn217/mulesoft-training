@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
-    <flow name="account-manage-api-main">
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+    <validation:config name="Validation_Config" doc:name="Validation Config" doc:id="a37e7525-7f1f-45d5-8fcf-03ec531ff967" />
+	<flow name="account-manage-api-main">
         <http:listener config-ref="account-manage-api-httpListenerConfig" path="/api/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
                 <http:headers>#[vars.outboundHeaders default {}]</http:headers>
@@ -121,6 +123,78 @@ output application/json
     </flow>
     <flow name="post:\accounts:application\json:account-manage-api-config">
         <logger level="INFO" doc:name="Stage Logger" doc:id="feeb1975-3486-43ff-b7e7-eadc4527387c" message="Message Id : #[correlationId] || Request Received for account manage API || #[payload] "/>
+		<ee:transform doc:name="Set Data and Format Validation errorResponse" doc:id="e86d19e9-fdcb-4685-a7b0-2c32be7e1aff" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+[({
+	"errorMessage": "Required Value is Missing for [accountNumber]"
+}) if (isEmpty(payload.accountNumber)),
+({
+	"errorMessage": "Invalid Value Received for [accountNumber]. Allowed Length 40"
+}) if ((!isEmpty(payload.accountNumber)) and !((sizeOf(payload.accountNumber) >= 1) and (sizeOf(payload.accountNumber) <= 40))),
+({
+	"errorMessage": "Required Value is Missing for [accountName]"
+}) if (isEmpty(payload.accountName)),
+({
+	"errorMessage": "Invalid Value Received for [accountName]. Allowed Length 255"
+}) if ((!isEmpty(payload.accountName)) and !((sizeOf(payload.accountName) >= 1) and (sizeOf(payload.accountName) <= 255))),
+({
+	"errorMessage": "Required Value is Missing for [billingStreet]"
+}) if (isEmpty(payload.billingStreet)),
+({
+	"errorMessage": "Invalid Value Received for [billingStreet]. Allowed Length 255"
+}) if ((!isEmpty(payload.billingStreet)) and !((sizeOf(payload.billingStreet) >= 1) and (sizeOf(payload.billingStreet) <= 255))),
+({
+	"errorMessage": "Required Value is Missing for [billingCity]"
+}) if (isEmpty(payload.billingCity)),
+({
+	"errorMessage": "Invalid Value Received for [billingCity]. Allowed Length 40"
+}) if ((!isEmpty(payload.billingCity)) and !((sizeOf(payload.billingCity) >= 1) and (sizeOf(payload.billingCity) <= 40))),
+({
+	"errorMessage": "Required Value is Missing for [billingCountry]"
+}) if (isEmpty(payload.billingCountry)),
+({
+	"errorMessage": "Invalid Value Received for [billingCountry]. Allowed Length 80"
+}) if ((!isEmpty(payload.billingCountry)) and !((sizeOf(payload.billingCountry) >= 1) and (sizeOf(payload.billingCountry) <= 80))),
+({
+	"errorMessage": "Required Value is Missing for [billingState]"
+}) if (isEmpty(payload.billingState)),
+({
+	"errorMessage": "Invalid Value Received for [billingState]. Allowed Length 80"
+}) if ((!isEmpty(payload.billingState)) and !((sizeOf(payload.billingState) >= 1) and (sizeOf(payload.billingState) <= 80))),
+({
+	"errorMessage": "Required Value is Missing for [billingPostalCode]"
+}) if (isEmpty(payload.billingPostalCode)),
+({
+	"errorMessage": "Invalid Value Received for [billingPostalCode]. Allowed Length 20"
+}) if ((!isEmpty(payload.billingPostalCode)) and !((sizeOf(payload.billingPostalCode) >= 1) and (sizeOf(payload.billingPostalCode) <= 20))),
+({
+	"errorMessage": "Required Value is Missing for [accountPhoneNumber]"
+}) if (isEmpty(payload.accountPhoneNumber)),
+({
+	"errorMessage": "Invalid Value Received for [accountPhoneNumber]. Allowed Length 40"
+}) if ((!isEmpty(payload.accountPhoneNumber)) and !((sizeOf(payload.accountPhoneNumber) >= 1) and (sizeOf(payload.accountPhoneNumber) <= 40)))]
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Set errorMessage" doc:id="b75d64eb-6ccb-4df3-b2c6-cf9fd472e95c" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="errorMessage" ><![CDATA[%dw 2.0
+output application/json
+var errorResponse = vars.errorResponse
+---
+if ( !isEmpty(errorResponse) ) (errorResponse..errorMessage) else null]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<validation:is-true doc:id="dc5ae637-65a6-4469-9a03-8243751392f0" config-ref="Validation_Config" expression="#[isEmpty(vars.errorMessage)]" message="Error in Create Account Request" doc:name="Validate errorMessage">
+			<error-mapping targetType="DATA:VALIDATION" />
+		</validation:is-true>
 		<ee:transform doc:name="Frame Response">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
@@ -133,5 +207,6 @@ output application/json
 } ]]></ee:set-payload>
             </ee:message>
         </ee:transform>
+		<error-handler ref="global-error-handlingError_Handler" />
     </flow>
 </mule>
