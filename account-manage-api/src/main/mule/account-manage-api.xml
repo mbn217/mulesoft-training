@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
-http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
     <validation:config name="Validation_Config" doc:name="Validation Config" doc:id="a37e7525-7f1f-45d5-8fcf-03ec531ff967" />
 	<flow name="account-manage-api-main">
         <http:listener config-ref="account-manage-api-httpListenerConfig" path="/api/*">
@@ -195,6 +196,9 @@ if ( !isEmpty(errorResponse) ) (errorResponse..errorMessage) else null]]></ee:se
 		<validation:is-true doc:id="dc5ae637-65a6-4469-9a03-8243751392f0" config-ref="Validation_Config" expression="#[isEmpty(vars.errorMessage)]" message="Error in Create Account Request" doc:name="Validate errorMessage">
 			<error-mapping targetType="DATA:VALIDATION" />
 		</validation:is-true>
+		<async doc:name="Async" doc:id="10c84810-8f1f-466a-8914-d2a79d29101e" >
+			<flow-ref doc:name="account-manage-api-log-db Call" doc:id="e101d6b3-e067-48e3-8972-e1eb675bd8da" name="account-manage-api-log-db" />
+		</async>
 		<ee:transform doc:name="Frame Response">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
@@ -209,4 +213,18 @@ output application/json
         </ee:transform>
 		<error-handler ref="global-error-handlingError_Handler" />
     </flow>
+	<sub-flow name="account-manage-api-log-db" doc:id="b1e04fc9-c7d8-4d51-8f28-9602c3542de6" >
+		<logger level="INFO" doc:name="Before DB Call Logger" doc:id="476346f3-9ccf-44f4-bb0f-5e1ee31f1af1" message="Message Id : #[correlationId] || Before SQL DB call" />
+		<db:insert doc:name="Insert" doc:id="e3412e6e-d7ea-4a15-a636-492fe814e574" config-ref="Database_Config">
+			<db:sql ><![CDATA[${mulesoft.dev.insert}]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	messageId: correlationId,
+	apiRequest: write(payload,"application/json"),
+	taskName: "Create Account",
+	status: "Received",
+	requestTimestamp: now()
+}]]]></db:input-parameters>
+		</db:insert>
+		<logger level="INFO" doc:name="After DB Call Logger" doc:id="95889d24-87e7-4ce3-b922-03c62bad2e85" message="Message Id : #[correlationId] || After SQL DB call" />
+	</sub-flow>
 </mule>

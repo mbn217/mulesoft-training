@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_b1e04fc9_c7d8_4d51_8f28_9602c3542de6_Input_Variables_errorMessage = Array<String> | Null
+
