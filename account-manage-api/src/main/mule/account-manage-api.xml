@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
 http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
-http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
     <validation:config name="Validation_Config" doc:name="Validation Config" doc:id="a37e7525-7f1f-45d5-8fcf-03ec531ff967" />
 	<flow name="account-manage-api-main">
         <http:listener config-ref="account-manage-api-httpListenerConfig" path="/api/*">
@@ -63,7 +64,7 @@ output application/json
 {message: "Not acceptable"}]]></ee:set-payload>
                     </ee:message>
                     <ee:variables>
-                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+						<ee:set-variable variableName="httpStatus" ><![CDATA[406]]></ee:set-variable>
                     </ee:variables>
                 </ee:transform>
             </on-error-propagate>
@@ -131,12 +132,7 @@ output application/json
 				<ee:set-variable variableName="errorResponse" ><![CDATA[%dw 2.0
 output application/json
 ---
-[({
-	"errorMessage": "Required Value is Missing for [accountNumber]"
-}) if (isEmpty(payload.accountNumber)),
-({
-	"errorMessage": "Invalid Value Received for [accountNumber]. Allowed Length 40"
-}) if ((!isEmpty(payload.accountNumber)) and !((sizeOf(payload.accountNumber) >= 1) and (sizeOf(payload.accountNumber) <= 40))),
+[
 ({
 	"errorMessage": "Required Value is Missing for [accountName]"
 }) if (isEmpty(payload.accountName)),
@@ -197,9 +193,12 @@ if ( !isEmpty(errorResponse) ) (errorResponse..errorMessage) else null]]></ee:se
 			<error-mapping targetType="DATA:VALIDATION" />
 		</validation:is-true>
 		<async doc:name="Async" doc:id="10c84810-8f1f-466a-8914-d2a79d29101e" >
-			<flow-ref doc:name="account-manage-api-log-db Call" doc:id="e101d6b3-e067-48e3-8972-e1eb675bd8da" name="account-manage-api-log-db" />
+			<flow-ref doc:name="Call account-manage-api-log-db " doc:id="e101d6b3-e067-48e3-8972-e1eb675bd8da" name="account-manage-api-log-db" />
 		</async>
-		<ee:transform doc:name="Frame Response">
+		<flow-ref doc:name="Call account-manage-api-create-account-flow" doc:id="1389e7d3-269e-4877-bcb1-bb9c799693da" name="account-manage-api-create-account-flow"/>
+		<choice doc:name="Check account Creation" doc:id="2dd6f38b-04f4-4d6b-9e62-0f6be45360a6" >
+			<when expression="#[payload.items.payload.success contains true]">
+				<ee:transform doc:name="Frame Success Response">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -210,12 +209,34 @@ output application/json
   userMessage: "Account created successfully"
 } ]]></ee:set-payload>
             </ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[200]]></ee:set-variable>
+					</ee:variables>
         </ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Frame Failure Response" doc:id="0e716a35-0e73-436a-b3df-180a608e06e5" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  status: "Failure",
+  correlationId: correlationId,
+  userMessage: payload.items.exception.message default "Internal Server Error"
+} ]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[400]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</otherwise>
+		</choice>
 		<error-handler ref="global-error-handlingError_Handler" />
     </flow>
 	<sub-flow name="account-manage-api-log-db" doc:id="b1e04fc9-c7d8-4d51-8f28-9602c3542de6" >
 		<logger level="INFO" doc:name="Before DB Call Logger" doc:id="476346f3-9ccf-44f4-bb0f-5e1ee31f1af1" message="Message Id : #[correlationId] || Before SQL DB call" />
-		<db:insert doc:name="Insert" doc:id="e3412e6e-d7ea-4a15-a636-492fe814e574" config-ref="Database_Config">
+		<db:insert doc:name="Insert into mulesoft_dev" doc:id="e3412e6e-d7ea-4a15-a636-492fe814e574" config-ref="Database_Config" transactionalAction="NOT_SUPPORTED" target="dbResponse">
 			<db:sql ><![CDATA[${mulesoft.dev.insert}]]></db:sql>
 			<db:input-parameters ><![CDATA[#[{
 	messageId: correlationId,
@@ -226,5 +247,20 @@ output application/json
 }]]]></db:input-parameters>
 		</db:insert>
 		<logger level="INFO" doc:name="After DB Call Logger" doc:id="95889d24-87e7-4ce3-b922-03c62bad2e85" message="Message Id : #[correlationId] || After SQL DB call" />
+	</sub-flow>
+	<sub-flow name="account-manage-api-create-account-flow" doc:id="76861d0a-46e7-4fa7-9c01-61f9ebb5ca5d" >
+		<logger level="INFO" doc:name="Before SFDC Call Logger" doc:id="bfdaed6c-1fe6-4c34-9a94-1a568afceece" message="Message Id : #[correlationId] || Before sfdc account object call"/>
+		<salesforce:create doc:id="3e085118-c6d2-4c28-be5f-e9b81fdca0b1" config-ref="Salesforce_Config" type="Account" doc:name="Create Account">
+			<salesforce:records ><![CDATA[#[[{
+    Name: payload.accountName,
+    Phone: payload.accountPhoneNumber,
+    BillingStreet: payload.billingStreet,
+    BillingCity: payload.billingCity,
+    BillingState: payload.billingState,
+    BillingPostalCode: payload.billingPostalCode,
+    BillingCountry: payload.billingCountry
+}]]]]></salesforce:records>
+		</salesforce:create>
+		<logger level="INFO" doc:name="After SFDC Call Logger" doc:id="31bad83d-eb1a-49d9-ae5a-9e8b95ffb70f" message="Message Id : #[correlationId] || After sfdc account object call"/>
 	</sub-flow>
 </mule>

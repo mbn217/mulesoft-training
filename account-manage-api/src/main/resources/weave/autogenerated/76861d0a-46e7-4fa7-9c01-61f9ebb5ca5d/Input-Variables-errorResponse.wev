@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_76861d0a_46e7_4fa7_9c01_61f9ebb5ca5d_Input_Variables_errorResponse = Array<{| errorMessage: String |}>
+
