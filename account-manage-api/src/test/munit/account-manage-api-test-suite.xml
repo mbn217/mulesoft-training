@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<munit:config name="account-manage-api-test-suite.xml" />
+	<munit:test name="account-manage-api-test-suiteTest" doc:id="d72cda85-51e0-4cd2-bc67-efab0ad4056c" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when SQL DB" doc:id="eb8e9342-cce1-4ebb-a6f7-7623094da085" processor="db:insert">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Insert into mulesoft_dev" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:variables >
+						<munit-tools:variable key="dbResponse" value="#[output application/json --- readUrl('classpath://sampleOutput/insert-success-db-mock-response.json', 'application/json')]" />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when Create Account" doc:id="c8d1d256-ad15-4516-9f67-a8bb68744753" processor="salesforce:create">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Create Account" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/json --- readUrl('classpath://sampleOutput/create-account-success-salesforce-mock-response.json', 'application/json')]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<ee:transform doc:name="Set Account Request" doc:id="83bd79a8-0ba3-4b66-9036-ed5d8f2d7137">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"accountName": "John Doe",
+	"billingStreet": "456 Oak Street",
+	"billingCity": "Townsville",
+	"billingCountry": "United States",
+	"billingState": "California",
+	"billingPostalCode": "54321",
+	"accountPhoneNumber": "1234567890"
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<try doc:name="Try" doc:id="2b4895b3-dc63-4c4b-a6b5-6dac1466cac3" >
+				<flow-ref doc:name="Call post:\accounts:application\json:account-manage-api-config" doc:id="d3e5fd83-46c7-442a-a6a4-82d16aef51f4" name="post:\accounts:application\json:account-manage-api-config"/>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="a07b64fc-99db-44b4-9a42-eb55708c7c52" >
+						<logger level="INFO" doc:name="Error Logger" doc:id="0b05c865-8319-46dc-a617-5634ffce9cfb" message="Inside error handling munit #[payload]"/>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-equals doc:name="Validate userMessage" doc:id="7de00a5b-ec71-4ff4-a07a-6b3e7cc24788" expected="Account created successfully" actual="#[payload.userMessage]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="account-manage-api-error-test-suiteTest" doc:id="08631871-ce6f-4251-a073-264b20c5c095" >
+		<munit:execution >
+			<ee:transform doc:name="Set Accout API Request" doc:id="5bd2943a-49e4-4f30-8975-01b7fab06338" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"accountName": "",
+	"billingStreet": "456 Oak Street",
+	"billingCity": "Townsville",
+	"billingCountry": "United States",
+	"billingState": "California",
+	"billingPostalCode": "54321",
+	"accountPhoneNumber": "1234567890"
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<try doc:name="Try" doc:id="312456b4-87a0-452d-9e9a-8236051a89f0" >
+				<flow-ref doc:name="Call post:\accounts:application\json:account-manage-api-config" doc:id="91f9a8f4-1a6b-479e-8f4e-f26cf6d3ec0a" name="post:\accounts:application\json:account-manage-api-config" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="da9cb404-aaa1-4214-8b47-e60179774135" >
+						<logger level="INFO" doc:name="Error Logger" doc:id="d4f73c18-cac1-4e99-b12b-a9c078cb582e" message="Inside error handling munit #[payload]" />
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Validate errorMessages" doc:id="73e109fd-f135-40e3-9557-ea69e207e351" expected="Required Value is Missing for [accountName]" actual="#[payload.errorMessage[0]]"/>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>
