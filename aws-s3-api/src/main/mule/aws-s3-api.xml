@@ -10,7 +10,7 @@ http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/cu
 		<http:listener-connection host="0.0.0.0" port="8081" />
 	</http:listener-config>
 	<s3:config name="Amazon_S3_Configuration" doc:name="Amazon S3 Configuration" doc:id="a3b5fca9-f1b2-4a8f-a6d6-325357bf9d1c" >
-		<s3:connection accessKey="AKIASOAYHPF54MRPZ46K" secretKey="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"/>
+		<s3:connection accessKey="" secretKey=""/>
 	</s3:config>
 	<flow name="aws-s3-apiFlow" doc:id="651d2cd0-2e4f-4cf0-a6fb-ff1892b6853e" >
 		<http:listener doc:name="Listener" doc:id="7d36f1b4-735f-45c1-85ae-b1ac2a81edae" config-ref="HTTP_Listener_config" path="/aws/s3/upload"/>
