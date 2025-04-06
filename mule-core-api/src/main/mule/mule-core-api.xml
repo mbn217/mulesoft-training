@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="5330b3d9-16c6-440c-b843-918a8f8f5400" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="mule-core-apiFlow" doc:id="d07b4556-0586-4a8e-bc3f-fdbdc1384be8" >
+		<http:listener doc:name="Listener" doc:id="5b2bc7e7-423f-4430-a130-4084b0a1ba64" config-ref="HTTP_Listener_config" path="/api/choice"/>
+		<set-variable value="#[payload.age]" doc:name="Set Variable" doc:id="9ee4fa2a-e82b-4fad-90ae-7a408533ade5" variableName="age"/>
+		<choice doc:name="Choice" doc:id="501444c4-90ae-43d4-ab37-f126feaa40f1" >
+			<when expression="#[vars.age &gt;= 18]">
+				<ee:transform doc:name="Transform Message" doc:id="888affbc-dbdc-4938-b91e-2f59f65b07d0">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Age is more than 18!! eligible for voting :)"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message" doc:id="fda82910-606e-4ddd-9f7e-ce78a12355a4">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Age is less than 18!! Not eligible for voting :("
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</otherwise>
+		</choice> 
+	</flow>
+	<flow name="mule-core-apiFlow1" doc:id="c82c49c4-f30f-404d-b941-8880276e3316" >
+		<http:listener doc:name="Listener" doc:id="154e52e8-dbea-4351-989f-6178978dcc2e" config-ref="HTTP_Listener_config" path="/api/foreach"/>
+		<set-variable value="0" doc:name="Set Variable" doc:id="3d367996-cb83-4165-b750-1f922644c876" variableName="total"/>
+		<foreach doc:name="For Each" doc:id="fe088c45-2f55-41e4-aad6-aa3ec6379a0f" >
+			<logger level="INFO" doc:name="Logger" doc:id="8f7fce42-b250-4ef7-b732-f30dd3fc5ced" message="Processing Payload  : #[payload]  ||  amount : #[payload.amount]"/>
+			<ee:transform doc:name="Transform Message" doc:id="fa285e81-580f-4de2-ae6f-3159d958c565">
+				<ee:message>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="total"><![CDATA[%dw 2.0
+output application/json
+---
+vars.total + payload.amount]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="b02a5b9b-8aee-4774-9e53-0cbd19db66f2">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Total : vars.total
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	
+		
+	</flow>
+	<flow name="mule-core-apiFlow2" doc:id="a79baedd-c7dc-4ce0-bf58-cecb77524675" >
+		<http:listener doc:name="Listener" doc:id="a1b6948f-0dd5-47a0-a3a9-85741b07729b" config-ref="HTTP_Listener_config" path="/api/batchprocessing"/>
+		<ee:transform doc:name="Transform Message" doc:id="87b2b768-322f-498c-be35-75f48c32fc50" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+[1,2,3,4,5]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<batch:job jobName="mule-core-apiBatch_Job" doc:id="1d93e422-d70c-4b68-ab9b-fe56f9d20c2a" >
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="eea8dc10-57e1-432f-8016-e58ef108f531" >
+					<logger level="INFO" doc:name="Logger" doc:id="d13d6c6b-a255-46d0-a7c0-420720d7ceb1" message='#["input" ++ payload]' />
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="662129c3-6d39-45a9-9e21-20398fb35030" size="2">
+						<logger level="INFO" doc:name="Logger" doc:id="6e62c70b-d1bb-4f8c-98f2-2e2360164aea" message="#[payload]" />
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<logger level="INFO" doc:name="Logger" doc:id="7b60a52f-d4ef-402a-bbc2-581bacba407c" message="#[payload]" />
+			</batch:on-complete>
+		</batch:job>
+		<ee:transform doc:name="Transform Message" doc:id="6ebb21e7-4205-4ac8-b4f9-e10e0854c54e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
